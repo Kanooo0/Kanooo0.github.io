@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grand Luxury Tree Final v2</title>
+    <title>TREE</title>
     <style>
         body { margin: 0; overflow: hidden; background-color: #000000; font-family: 'Times New Roman', serif; }
         #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
@@ -442,82 +442,106 @@
             snowGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             snowGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
             
-            // 创建美观的雪花纹理
+            // 创建精致的雪花纹理
             const canvas = document.createElement('canvas');
-            const size = 64;
+            const size = 128; // 增大画布尺寸以获得更精细的细节
             canvas.width = size;
             canvas.height = size;
             const ctx = canvas.getContext('2d');
             
-            // 绘制六角星雪花
+            // 绘制精致的真实雪花
             ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+            ctx.lineWidth = 1.5;
             
-            // 画一个六边形雪花
             const centerX = size / 2;
             const centerY = size / 2;
-            const radius = size / 2;
             
-            // 画主六边形
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                const angle = (i * Math.PI / 3);
-                const x = centerX + Math.cos(angle) * radius * 0.5;
-                const y = centerY + Math.sin(angle) * radius * 0.5;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+            // 绘制六角星雪花，更接近真实雪花结构
+            function drawSnowflake(ctx, centerX, centerY, radius) {
+                const branches = 6; // 六个分支
+                
+                for (let i = 0; i < branches; i++) {
+                    const angle = (i * Math.PI / 3); // 60度间隔
+                    
+                    // 主分支
+                    const mainBranchLength = radius * 0.8;
+                    const mainStartX = centerX;
+                    const mainStartY = centerY;
+                    const mainEndX = centerX + Math.cos(angle) * mainBranchLength;
+                    const mainEndY = centerY + Math.sin(angle) * mainBranchLength;
+                    
+                    // 绘制主分支
+                    ctx.beginPath();
+                    ctx.moveTo(mainStartX, mainStartY);
+                    ctx.lineTo(mainEndX, mainEndY);
+                    ctx.stroke();
+                    
+                    // 绘制主分支上的次级分支
+                    for (let j = 0.2; j < 0.8; j += 0.3) { // 在主分支上创建次级分支
+                        // 左侧次级分支
+                        const branchAngleLeft = angle - Math.PI / 6; // 30度
+                        const branchStartX = centerX + Math.cos(angle) * mainBranchLength * j;
+                        const branchStartY = centerY + Math.sin(angle) * mainBranchLength * j;
+                        const branchLength = radius * 0.2;
+                        const branchEndXLeft = branchStartX + Math.cos(branchAngleLeft) * branchLength;
+                        const branchEndYLeft = branchStartY + Math.sin(branchAngleLeft) * branchLength;
+                        
+                        // 右侧次级分支
+                        const branchAngleRight = angle + Math.PI / 6; // 30度
+                        const branchEndXRight = branchStartX + Math.cos(branchAngleRight) * branchLength;
+                        const branchEndYRight = branchStartY + Math.sin(branchAngleRight) * branchLength;
+                        
+                        // 绘制左侧次级分支
+                        ctx.beginPath();
+                        ctx.moveTo(branchStartX, branchStartY);
+                        ctx.lineTo(branchEndXLeft, branchEndYLeft);
+                        ctx.stroke();
+                        
+                        // 绘制右侧次级分支
+                        ctx.beginPath();
+                        ctx.moveTo(branchStartX, branchStartY);
+                        ctx.lineTo(branchEndXRight, branchEndYRight);
+                        ctx.stroke();
+                        
+                        // 在次级分支上添加更小的分支
+                        if (j > 0.3) { // 只在主分支的外侧部分添加更小的分支
+                            // 左侧次级分支的小分支
+                            const tinyBranchAngleLeft = branchAngleLeft - Math.PI / 4;
+                            const tinyBranchStartX = branchEndXLeft;
+                            const tinyBranchStartY = branchEndYLeft;
+                            const tinyBranchLength = branchLength * 0.5;
+                            const tinyBranchEndX = tinyBranchStartX + Math.cos(tinyBranchAngleLeft) * tinyBranchLength;
+                            const tinyBranchEndY = tinyBranchStartY + Math.sin(tinyBranchAngleLeft) * tinyBranchLength;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(tinyBranchStartX, tinyBranchStartY);
+                            ctx.lineTo(tinyBranchEndX, tinyBranchEndY);
+                            ctx.stroke();
+                            
+                            // 右侧次级分支的小分支
+                            const tinyBranchAngleRight = branchAngleRight + Math.PI / 4;
+                            const tinyBranchStartXRight = branchEndXRight;
+                            const tinyBranchStartYRight = branchEndYRight;
+                            const tinyBranchEndXRight = tinyBranchStartXRight + Math.cos(tinyBranchAngleRight) * tinyBranchLength;
+                            const tinyBranchEndYRight = tinyBranchStartYRight + Math.sin(tinyBranchAngleRight) * tinyBranchLength;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(tinyBranchStartXRight, tinyBranchStartYRight);
+                            ctx.lineTo(tinyBranchEndXRight, tinyBranchEndYRight);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                // 在中心绘制一个较小的圆点
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius * 0.05, 0, Math.PI * 2); // 减小中心点大小
+                ctx.fill();
             }
-            ctx.closePath();
-            ctx.fill();
             
-            // 画六个分支
-            for (let i = 0; i < 6; i++) {
-                const angle = (i * Math.PI / 3);
-                
-                // 主分支
-                const x1 = centerX + Math.cos(angle) * radius * 0.5;
-                const y1 = centerY + Math.sin(angle) * radius * 0.5;
-                const x2 = centerX + Math.cos(angle) * radius * 0.8;
-                const y2 = centerY + Math.sin(angle) * radius * 0.8;
-                
-                // 画主分支
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-                ctx.stroke();
-                
-                // 画小分支
-                const branchAngle1 = angle - Math.PI / 6;
-                const branchAngle2 = angle + Math.PI / 6;
-                
-                const bx1 = centerX + Math.cos(angle) * radius * 0.65;
-                const by1 = centerY + Math.sin(angle) * radius * 0.65;
-                
-                const bx2 = bx1 + Math.cos(branchAngle1) * radius * 0.15;
-                const by2 = by1 + Math.sin(branchAngle1) * radius * 0.15;
-                
-                const bx3 = bx1 + Math.cos(branchAngle2) * radius * 0.15;
-                const by3 = by1 + Math.sin(branchAngle2) * radius * 0.15;
-                
-                // 画小分支1
-                ctx.beginPath();
-                ctx.moveTo(bx1, by1);
-                ctx.lineTo(bx2, by2);
-                ctx.stroke();
-                
-                // 画小分支2
-                ctx.beginPath();
-                ctx.moveTo(bx1, by1);
-                ctx.lineTo(bx3, by3);
-                ctx.stroke();
-            }
-            
-            // 在中心画一个圆点
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius * 0.1, 0, Math.PI * 2);
-            ctx.fill();
+            // 绘制雪花
+            drawSnowflake(ctx, centerX, centerY, size / 2);
             
             // 创建纹理
             const texture = new THREE.CanvasTexture(canvas);
@@ -525,12 +549,12 @@
             
             // 雪花材质 - 半透明白色
             snowMaterial = new THREE.PointsMaterial({
-                size: 0.5,
+                size: 0.7,
                 sizeAttenuation: true,
                 map: texture,
                 color: 0xffffff,
                 transparent: true,
-                opacity: 0.8,
+                opacity: 0.65, // 稍微增加不透明度
                 depthWrite: false,
                 blending: THREE.AdditiveBlending
             });
@@ -548,7 +572,8 @@
                     swaySpeed: Math.random() * 0.02 + 0.01, // 摆动速度
                     swayAmount: Math.random() * 0.5 + 0.2, // 摆动幅度
                     swayAngle: Math.random() * Math.PI * 2, // 摆动初始角度
-                    rotationSpeed: (Math.random() - 0.5) * 0.02 // 旋转速度
+                    rotationSpeed: (Math.random() - 0.5) * 0.02, // 旋转速度
+                    rotation: 0 // 当前旋转角度
                 });
             }
         }
@@ -571,11 +596,15 @@
                 particle.x += Math.sin(time * particle.swaySpeed + particle.swayAngle) * particle.swayAmount * dt;
                 particle.z += Math.cos(time * particle.swaySpeed + particle.swayAngle) * particle.swayAmount * dt;
                 
+                // 更新旋转
+                particle.rotation += particle.rotationSpeed;
+                
                 // 重置雪花位置（当雪花落到地面时）
                 if (particle.y < -50) {
                     particle.y = 50; // 重置到顶部
                     particle.x = (Math.random() - 0.5) * 100;
                     particle.z = (Math.random() - 0.5) * 100;
+                    particle.swayAngle = Math.random() * Math.PI * 2; // 重置摆动角度
                 }
                 
                 // 更新几何体位置
