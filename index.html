@@ -116,6 +116,12 @@
         let photoMeshGroup = new THREE.Group();
         let caneTexture; 
 
+        // 雪花系统
+        let snowSystem;
+        let snowGeometry;
+        let snowMaterial;
+        let snowParticles = [];
+
         async function init() {
             initThree();
             setupEnvironment(); 
@@ -123,6 +129,7 @@
             createTextures();
             createParticles(); 
             createDust();     
+            createSnow(); // 添加雪花
             setupPostProcessing();
             setupEvents();
             
@@ -412,6 +419,175 @@
             }
         }
 
+        // 创建雪花系统
+        function createSnow() {
+            const snowCount = 500; // 雪花数量
+            snowGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(snowCount * 3);
+            const sizes = new Float32Array(snowCount);
+            
+            // 初始化雪花位置和大小
+            for (let i = 0; i < snowCount; i++) {
+                const i3 = i * 3;
+                
+                // 随机位置 - 在一个较大的立方体区域内
+                positions[i3] = (Math.random() - 0.5) * 100; // x
+                positions[i3 + 1] = Math.random() * 100; // y (在顶部开始)
+                positions[i3 + 2] = (Math.random() - 0.5) * 100; // z
+                
+                // 随机大小
+                sizes[i] = Math.random() * 0.2 + 0.05;
+            }
+            
+            snowGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            snowGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+            
+            // 创建美观的雪花纹理
+            const canvas = document.createElement('canvas');
+            const size = 64;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // 绘制六角星雪花
+            ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+            ctx.beginPath();
+            
+            // 画一个六边形雪花
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2;
+            
+            // 画主六边形
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI / 3);
+                const x = centerX + Math.cos(angle) * radius * 0.5;
+                const y = centerY + Math.sin(angle) * radius * 0.5;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            
+            // 画六个分支
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * Math.PI / 3);
+                
+                // 主分支
+                const x1 = centerX + Math.cos(angle) * radius * 0.5;
+                const y1 = centerY + Math.sin(angle) * radius * 0.5;
+                const x2 = centerX + Math.cos(angle) * radius * 0.8;
+                const y2 = centerY + Math.sin(angle) * radius * 0.8;
+                
+                // 画主分支
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                ctx.stroke();
+                
+                // 画小分支
+                const branchAngle1 = angle - Math.PI / 6;
+                const branchAngle2 = angle + Math.PI / 6;
+                
+                const bx1 = centerX + Math.cos(angle) * radius * 0.65;
+                const by1 = centerY + Math.sin(angle) * radius * 0.65;
+                
+                const bx2 = bx1 + Math.cos(branchAngle1) * radius * 0.15;
+                const by2 = by1 + Math.sin(branchAngle1) * radius * 0.15;
+                
+                const bx3 = bx1 + Math.cos(branchAngle2) * radius * 0.15;
+                const by3 = by1 + Math.sin(branchAngle2) * radius * 0.15;
+                
+                // 画小分支1
+                ctx.beginPath();
+                ctx.moveTo(bx1, by1);
+                ctx.lineTo(bx2, by2);
+                ctx.stroke();
+                
+                // 画小分支2
+                ctx.beginPath();
+                ctx.moveTo(bx1, by1);
+                ctx.lineTo(bx3, by3);
+                ctx.stroke();
+            }
+            
+            // 在中心画一个圆点
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 创建纹理
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            
+            // 雪花材质 - 半透明白色
+            snowMaterial = new THREE.PointsMaterial({
+                size: 0.5,
+                sizeAttenuation: true,
+                map: texture,
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            
+            snowSystem = new THREE.Points(snowGeometry, snowMaterial);
+            scene.add(snowSystem);
+            
+            // 为每个雪花创建初始速度和随机运动参数
+            for (let i = 0; i < snowCount; i++) {
+                snowParticles.push({
+                    x: positions[i * 3],
+                    y: positions[i * 3 + 1],
+                    z: positions[i * 3 + 2],
+                    speed: Math.random() * 0.5 + 0.2, // 下落速度
+                    swaySpeed: Math.random() * 0.02 + 0.01, // 摆动速度
+                    swayAmount: Math.random() * 0.5 + 0.2, // 摆动幅度
+                    swayAngle: Math.random() * Math.PI * 2, // 摆动初始角度
+                    rotationSpeed: (Math.random() - 0.5) * 0.02 // 旋转速度
+                });
+            }
+        }
+
+        // 更新雪花位置
+        function updateSnow(dt) {
+            if (!snowSystem) return;
+            
+            const positions = snowSystem.geometry.attributes.position.array;
+            const time = clock.elapsedTime;
+            
+            for (let i = 0; i < snowParticles.length; i++) {
+                const particle = snowParticles[i];
+                const i3 = i * 3;
+                
+                // 更新Y位置（下落）
+                particle.y -= particle.speed * dt;
+                
+                // 水平摆动
+                particle.x += Math.sin(time * particle.swaySpeed + particle.swayAngle) * particle.swayAmount * dt;
+                particle.z += Math.cos(time * particle.swaySpeed + particle.swayAngle) * particle.swayAmount * dt;
+                
+                // 重置雪花位置（当雪花落到地面时）
+                if (particle.y < -50) {
+                    particle.y = 50; // 重置到顶部
+                    particle.x = (Math.random() - 0.5) * 100;
+                    particle.z = (Math.random() - 0.5) * 100;
+                }
+                
+                // 更新几何体位置
+                positions[i3] = particle.x;
+                positions[i3 + 1] = particle.y;
+                positions[i3 + 2] = particle.z;
+            }
+            
+            // 标记位置属性需要更新
+            snowSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
         function setupEvents() {
             window.addEventListener('resize', () => {
                 camera.aspect = window.innerWidth / window.innerHeight;
@@ -424,6 +600,9 @@
         function animate() {
             requestAnimationFrame(animate);
             const dt = clock.getDelta();
+
+            // 更新雪花
+            updateSnow(dt);
 
             // Rotation Logic - 自动旋转
             if(STATE.mode === 'TREE') {
